@@ -736,6 +736,35 @@ impl App {
         }
     }
 
+    /// Create the merged document (one record per page), open it as a
+    /// new tab, then open Print Preview in merge-create mode so the user
+    /// can configure the layout (n-up, margins, sheet) before the final
+    /// imposed document is produced.
+    pub fn open_merge_document_preview(&mut self, print: bool) {
+        let Some(st) = self.merge_state.clone() else {
+            return;
+        };
+        // "On every page" mode has no layout step — merge directly.
+        if self.merge_docker.all_pages {
+            self.create_merged_document(print);
+            return;
+        }
+        match crate::print_merge::merged_document(self, &st) {
+            Ok(doc) => {
+                let n = doc.pages.len();
+                self.open_document(doc, None);
+                self.status =
+                    crate::i18n::trf("status.merge_done", &[("n", &n.to_string())]);
+                // Open the merge preview so the user can configure the
+                // layout (n-up, margins, sheet) and click "Create Document".
+                self.merge_preview =
+                    Some(crate::ui::merge_preview::MergePreview::new());
+            }
+            Err(e) => self.status = e,
+        }
+        let _ = print; // Print Merged Document also uses the same preview flow.
+    }
+
     /// The tab of the drawing Print Merged Document made last, when it is
     /// still open and unchanged, the merge data is the same and the
     /// active drawing is that drawing or, unchanged, the one it was
@@ -1011,7 +1040,7 @@ pub fn print_merge(app: &mut App, ui: &mut Ui) {
             )
             .clicked()
         {
-            app.create_merged_document(false);
+            app.open_merge_document_preview(false);
         }
         if ui
             .add_enabled(
@@ -1020,7 +1049,7 @@ pub fn print_merge(app: &mut App, ui: &mut Ui) {
             )
             .clicked()
         {
-            app.create_merged_document(true);
+            app.open_merge_document_preview(true);
         }
         if pick_folder {
             choose_pictures(app);

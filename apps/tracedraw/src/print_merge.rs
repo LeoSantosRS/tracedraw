@@ -1262,11 +1262,23 @@ fn named_placeholder(
             // A QR code group (made by Insert Field): keep all visual
             // settings and regenerate only the payload.
             if let Some(qr) = s.qr.as_deref().cloned() {
-                let new_qr = QrCode {
+                let mut new_qr = QrCode {
                     kind: QrKind::Url,
                     fields: vec![value.to_string()],
                     ..qr
                 };
+                // Adjust pixel_mm so the generated code fits the same physical
+                // box as the placeholder, regardless of QR version (the number
+                // of modules grows with the data length, which would change the
+                // total side if pixel_mm is kept fixed).
+                let orig_side = {
+                    let b = s.bounds();
+                    b.width().min(b.height())
+                };
+                if let Ok((new_n, _)) = crate::qr::modules(&new_qr.payload()) {
+                    let denom = (new_n + 2 * crate::qr::QUIET) as f64;
+                    new_qr.pixel_mm = (orig_side / denom).max(0.01);
+                }
                 let anchor = crate::qr::top_left(s).unwrap_or_else(|| {
                     let b = s.bounds();
                     tracedraw_core::geometry::Point::new(b.x0, b.y1)

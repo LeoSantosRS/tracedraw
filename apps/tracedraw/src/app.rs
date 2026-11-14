@@ -1523,6 +1523,8 @@ pub struct App {
     pub fullscreen_preview: bool,
     /// File > Print Preview, while it is open.
     pub print_preview: Option<crate::ui::print_preview::PrintPreview>,
+    /// "Create Merged Document" layout preview, while it is open.
+    pub merge_preview: Option<crate::ui::merge_preview::MergePreview>,
     /// The printer list being read off the interface's thread for the
     /// Print dialog, and the last list read (#614).
     pub printer_fetch: Option<std::sync::mpsc::Receiver<Vec<crate::printers::Printer>>>,
@@ -2960,6 +2962,7 @@ impl App {
             welcome_tab: WelcomeTab::GetStarted,
             fullscreen_preview: false,
             print_preview: None,
+            merge_preview: None,
             printer_fetch: None,
             print_job: None,
             printers_seen: Vec::new(),
@@ -8503,6 +8506,11 @@ impl App {
     /// not show this dialog again" says.
     pub fn export_with_options(&mut self) {
         self.export_asking(true);
+    }
+
+    pub fn export_all_pages_dialog(&mut self) {
+        use crate::ui::dialogs::{Dialog, ExportAllPagesState};
+        self.dialog = Dialog::ExportAllPages(ExportAllPagesState::default());
     }
 
     fn export_asking(&mut self, show_options: bool) {
